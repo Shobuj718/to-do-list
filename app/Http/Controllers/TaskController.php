@@ -8,72 +8,91 @@ use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
-    /**
-     * Paginate the authenticated user's tasks.
-     *
-     * @return \Illuminate\View\View
-     */
+   
     public function index()
     {
-        // paginate the authorized user's tasks with 5 per page
-        $tasks = Auth::user()
-            ->tasks()
-            ->orderBy('is_complete')
-            ->orderByDesc('created_at')
-            ->paginate(5);
+        $tasks = Task::orderBy('is_complete')->orderByDesc('created_at')->get();;
 
-        // return task index view with paginated tasks
+        $incomplete_task = Task::where('is_complete', 0)->get();
+
         return view('tasks', [
-            'tasks' => $tasks
+            'tasks' => $tasks,
+            'incomplete_task' => $incomplete_task
         ]);
     }
 
-    /**
-     * Store a new incomplete task for the authenticated user.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
+
+    public function completedTask(){
+        //$tasks = Task::all();
+        $tasks = Task::where('completed', 1)->orderBy('id', 'desc')->get();
+
+        return response()->json($tasks);
+    }
+    public function allTask(){
+        //$tasks = Task::all();
+        $tasks = Task::orderBy('is_complete')->orderByDesc('created_at')->get();
+
+
+        return response()->json($tasks);
+    }
+    public function allTasks(){
+
+        $tasks = Task::where('is_complete', 0)->orderBy('id', 'desc')->get();
+
+        return response()->json($tasks);
+    }
+    public function clearTask(){
+        $tasks = Task::all();
+        
+        return response()->json($tasks);
+    }
+
+    public function activeTasks(){
+             
+
+        $tasks = Task::where('is_complete', 0)->orderBy('id', 'desc')->get();
+
+        $incomplete_task = Task::where('is_complete', 0)->get();
+
+
+        return response()->json($tasks);
+
+    }
+
     public function store(Request $request)
     {
-        // validate the given request
-        $data = $this->validate($request, [
-            'title' => 'required|string|max:255',
-        ]);
+        
 
-        // create a new incomplete task with the given title
-        Auth::user()->tasks()->create([
-            'title' => $data['title'],
-            'is_complete' => false,
-        ]);
-
-        // flash a success message to the session
-        session()->flash('status', 'Task Created!');
-
-        // redirect to tasks index
-        return redirect('/tasks');
-    }
-
-    /**
-     * Mark the given task as complete and redirect to tasks index.
-     *
-     * @param \App\Models\Task $task
-     * @return \Illuminate\Routing\Redirector
-     * @throws \Illuminate\Auth\Access\AuthorizationException
-     */
-    public function update(Task $task)
-    {
-        // check if the authenticated user can complete the task
-        $this->authorize('complete', $task);
-
-        // mark the task as complete and save it
-        $task->is_complete = true;
+        $task = new Task;
+        $task->title = $request->title;
+        $task->is_complete = 0;
         $task->save();
 
-        // flash a success message to the session
-        session()->flash('status', 'Task Completed!');
+        $incomplete_task = Task::where('is_complete', 0)->get();
 
-        // redirect to tasks index
-        return redirect('/tasks');
+        return response()->json([
+            'task' => $task,
+            'incomplete_task' => $incomplete_task
+        ]);
+
     }
+
+    
+    public function update(Request $request)
+    {
+        
+        $task = Task::find($request->task_id);
+        if($task->is_complete == 1){
+            $task->is_complete = 0;
+        }else{
+            $task->is_complete = 1;
+        }
+        
+        $task->save();
+
+        return response()->json($task);
+
+    }
+
+    
 }
